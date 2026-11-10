@@ -1,0 +1,298 @@
+package app
+
+import (
+	"fmt"
+	"strconv"
+
+	"github.com/charmbracelet/lipgloss"
+)
+
+// ActionType identifies a context action.
+type ActionType int
+
+const (
+	ActionPlay ActionType = iota
+	ActionQueue
+	ActionLike
+	ActionGoArtist
+	ActionGoAlbum
+	ActionOpenSpotify
+	ActionCopyURI
+	ActionPlayPlaylist
+	ActionOpenPlaylistSpotify
+	ActionLoadTracks
+	ActionAddToPlaylist
+	ActionRemoveFromPlaylist
+	ActionShufflePlaylist
+)
+
+// actionLetters are the menu's letter shortcuts: a and f as in the main
+// view (queue, like), + to add to a playlist and d to remove, as in visual
+// mode.
+var actionLetters = map[string]ActionType{
+	"a": ActionQueue,
+	"f": ActionLike,
+	"+": ActionAddToPlaylist,
+	"d": ActionRemoveFromPlaylist,
+}
+
+// ActionItem is a single entry in the actions popup.
+type ActionItem struct {
+	Type  ActionType
+	Label string
+	Icon  string
+}
+
+// ActionsPopup is a floating overlay listing context actions for the selected item.
+type ActionsPopup struct {
+	items      []ActionItem
+	cursor     int
+	title      string
+	name       string // bare track/playlist name (for toasts)
+	trackID    string // track ID the actions apply to (for like/queue)
+	uri        string // track or playlist URI for play/copy actions
+	contextURI string // playlist/album URI to play the track within
+	artistID   string // first artist's Spotify ID for "Go to Artist"
+	albumID    string // album's Spotify ID for "Go to Album"
+	playlistID string // playlist the track is listed in (for remove), may be empty
+	position   int    // row index of the track in that playlist (-1 unknown)
+	width      int
+	height     int
+}
+
+// TrackActionContext carries the optional "this playlist" the track is being
+// viewed in, so the popup can offer "Remove from <playlist>" when that
+// playlist is editable.
+type TrackActionContext struct {
+	PlaylistID   string
+	PlaylistName string
+	Editable     bool
+	Position     int // row index of the track within the playlist (-1 if unknown)
+}
+
+// NewTrackActions returns an ActionsPopup configured for a track. contextURI is
+// the playlist/album the track should play within (may be empty). Actions
+// operate on this track explicitly, so the popup can target a track other than
+// the one under the cursor (e.g. the currently playing track from Now Playing).
+func NewTrackActions(trackName, artistName, uri, contextURI, artistID, albumID string, liked bool, width, height int) ActionsPopup {
+	return NewTrackActionsIn(trackName, artistName, uri, contextURI, artistID, albumID, liked, TrackActionContext{}, width, height)
+}
+
+// NewTrackActionsIn is NewTrackActions with knowledge of the playlist the
+// track is listed in (see TrackActionContext).
+func NewTrackActionsIn(trackName, artistName, uri, contextURI, artistID, albumID string, liked bool, in TrackActionContext, width, height int) ActionsPopup {
+	title := trackName
+	if artistName != "" {
+		title = fmt.Sprintf("%s — %s", trackName, artistName)
+	}
+
+	// What there's no single key for comes first: going to the album or
+	// artist (ga / gA outside the menu), adding to a playlist.
+	items := []ActionItem{
+		{Type: ActionGoAlbum, Label: "Go to Album", Icon: "→"},
+		{Type: ActionGoArtist, Label: "Go to Artist", Icon: "→"},
+		{Type: ActionAddToPlaylist, Label: "Add to Playlist…", Icon: "+"},
+	}
+	if in.Editable && in.PlaylistID != "" {
+		items = append(items, ActionItem{Type: ActionRemoveFromPlaylist, Label: "Remove from " + in.PlaylistName, Icon: "−"})
+	}
+	items = append(items,
+		ActionItem{Type: ActionQueue, Label: "Add to Queue", Icon: "♫"},
+		likeActionItem(liked),
+		ActionItem{Type: ActionPlay, Label: "Play", Icon: "▶"},
+		ActionItem{Type: ActionOpenSpotify, Label: "Open in Spotify", Icon: "◎"},
+		ActionItem{Type: ActionCopyURI, Label: "Copy Track URI", Icon: "⎘"},
+	)
+	return ActionsPopup{
+		items:      items,
+		playlistID: in.PlaylistID,
+		position:   in.Position,
+		title:      title,
+		name:       trackName,
+		trackID:    trackIDFromURI(uri),
+		uri:        uri,
+		contextURI: contextURI,
+		artistID:   artistID,
+		albumID:    albumID,
+		width:      width,
+		height:     height,
+	}
+}
+
+// likeActionItem returns the like/unlike entry for the given saved state.
+func likeActionItem(liked bool) ActionItem {
+	if liked {
+		return ActionItem{Type: ActionLike, Label: "Remove from Liked Songs", Icon: "♥"}
+	}
+	return ActionItem{Type: ActionLike, Label: "Save to Liked Songs", Icon: "♡"}
+}
+
+// SetLiked updates the like/unlike entry in place, e.g. once the track's saved
+// state has been looked up after the popup opened.
+func (a *ActionsPopup) SetLiked(liked bool) {
+	for i, item := range a.items {
+		if item.Type == ActionLike {
+			a.items[i] = likeActionItem(liked)
+			return
+		}
+	}
+}
+
+// NewPlaylistActions returns an ActionsPopup configured for a playlist.
+func NewPlaylistActions(playlistName, uri string, width, height int) ActionsPopup {
+	return ActionsPopup{
+		items: []ActionItem{
+			{Type: ActionPlayPlaylist, Label: "Play Playlist", Icon: "▶"},
+			{Type: ActionShufflePlaylist, Label: "Shuffle Play", Icon: "⤮"},
+			{Type: ActionLoadTracks, Label: "Load Tracks", Icon: "♫"},
+			{Type: ActionOpenPlaylistSpotify, Label: "Open in Spotify", Icon: "◎"},
+		},
+		title:  playlistName,
+		name:   playlistName,
+		uri:    uri,
+		width:  width,
+		height: height,
+	}
+}
+
+// withoutLoadTracks drops "Load Tracks" (for a playlist whose tracks Spotify
+// won't list).
+func (a *ActionsPopup) withoutLoadTracks() {
+	items := a.items[:0:0]
+	for _, it := range a.items {
+		if it.Type != ActionLoadTracks {
+			items = append(items, it)
+		}
+	}
+	a.items = items
+}
+
+// MoveDown moves the cursor down in the actions list.
+func (a *ActionsPopup) MoveDown() {
+	a.cursor++
+	if a.cursor >= len(a.items) {
+		a.cursor = len(a.items) - 1
+	}
+}
+
+// MoveUp moves the cursor up in the actions list.
+func (a *ActionsPopup) MoveUp() {
+	a.cursor--
+	if a.cursor < 0 {
+		a.cursor = 0
+	}
+}
+
+// Selected returns the currently highlighted action.
+func (a ActionsPopup) Selected() ActionItem {
+	if a.cursor >= 0 && a.cursor < len(a.items) {
+		return a.items[a.cursor]
+	}
+	return ActionItem{}
+}
+
+// URI returns the URI stored in the popup (for clipboard copy).
+func (a ActionsPopup) URI() string {
+	return a.uri
+}
+
+// Name returns the bare track/playlist name (for toast messages).
+func (a ActionsPopup) Name() string {
+	return a.name
+}
+
+// TrackID returns the track ID the actions apply to.
+func (a ActionsPopup) TrackID() string {
+	return a.trackID
+}
+
+// ContextURI returns the playlist/album URI to play the track within.
+func (a ActionsPopup) ContextURI() string {
+	return a.contextURI
+}
+
+// PlaylistID returns the playlist the track is listed in, if any.
+func (a ActionsPopup) PlaylistID() string { return a.playlistID }
+
+// Position returns the track's row index within that playlist (-1 if unknown).
+func (a ActionsPopup) Position() int { return a.position }
+
+// ArtistID returns the artist ID stored in the popup.
+func (a ActionsPopup) ArtistID() string {
+	return a.artistID
+}
+
+// AlbumID returns the album ID stored in the popup.
+func (a ActionsPopup) AlbumID() string {
+	return a.albumID
+}
+
+// View renders the actions popup as a centered floating overlay.
+func (a ActionsPopup) View() string {
+	overlayW := min(50, a.width-8)
+	overlayH := min(len(a.items)+6, a.height-4)
+
+	border := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(ColorAccent).
+		BorderBackground(ColorBg). // or the terminal's own colour shows as a ring
+		Background(ColorBg).
+		Width(overlayW).
+		Height(overlayH).
+		Padding(1, 2)
+
+	titleStyle := lipgloss.NewStyle().
+		Foreground(ColorAccent).
+		Bold(true)
+
+	subtitleStyle := lipgloss.NewStyle().
+		Foreground(ColorTextDim)
+
+	content := titleStyle.Render("  Actions") + "\n"
+	content += subtitleStyle.Render("  "+truncate(a.title, overlayW-6)) + "\n\n"
+
+	for i, item := range a.items {
+		prefix := "  "
+		style := lipgloss.NewStyle().Foreground(ColorTextSec)
+		if i == a.cursor {
+			prefix = "> "
+			style = StyleActiveItem
+		}
+		// Each row's number picks it (shown while there are nine or fewer).
+		num := " "
+		if len(a.items) <= 9 {
+			num = strconv.Itoa(i + 1)
+		}
+		line := fmt.Sprintf("%s%s  %s  %s", prefix, num, item.Icon, item.Label)
+		content += style.Render(line) + "\n"
+	}
+
+	content += "\n" + subtitleStyle.Render("  j/k navigate  Enter select  Esc close")
+
+	overlay := border.Render(content)
+	return lipgloss.Place(a.width, a.height, lipgloss.Center, lipgloss.Center, overlay,
+		overlayBackdrop())
+}
+
+// Pick selects the row a shortcut names: its number (1-9) or a letter
+// shared with the main view (actionLetters). It reports whether one did.
+func (a *ActionsPopup) Pick(key string) bool {
+	if len(key) == 1 && key[0] >= '1' && key[0] <= '9' {
+		if i := int(key[0] - '1'); i < len(a.items) {
+			a.cursor = i
+			return true
+		}
+		return false
+	}
+	t, ok := actionLetters[key]
+	if !ok {
+		return false
+	}
+	for i, it := range a.items {
+		if it.Type == t {
+			a.cursor = i
+			return true
+		}
+	}
+	return false
+}

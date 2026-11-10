@@ -1,0 +1,15 @@
+pre-commit:
+  parallel: true
+  commands:
+    lint:
+      glob: "*.go"
+      run: go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2 run --new-from-rev=HEAD
+    vet:
+      glob: "*.go"
+      run: go vet ./...
+
+pre-push:
+  parallel: true
+  commands:
+    test:
+      run: go test ./...

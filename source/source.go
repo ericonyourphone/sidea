@@ -1,0 +1,56 @@
+package source
+
+import (
+	"context"
+	"time"
+)
+
+// Track represents a Spotify track or, when IsSeparator/IsAlbumRow is set, a
+// display-only row in the track list. The boolean flags create a lightweight
+// tagged-union pattern — this is a pragmatic trade-off: Go lacks sum types,
+// and an interface+type-switch approach would add verbosity without benefit
+// at this project's scale.
+type Track struct {
+	ID          string
+	URI         string
+	Name        string
+	Artist      string
+	Album       string
+	ArtworkURL  string
+	Duration    time.Duration
+	Position    time.Duration
+	Playing     bool
+	DeviceName  string // active playback device (populated by CurrentPlayback)
+	ArtistID    string // first artist's Spotify ID for navigation
+	AlbumID     string // album's Spotify ID for navigation
+	IsAlbumRow  bool   // true for discography album rows (not playable tracks)
+	IsSeparator bool   // true for visual separator rows (not selectable)
+	// IsEpisode marks a podcast episode. Its ID is the episode URI (not a
+	// bare ID), which the library and queue calls accept in place of a
+	// track ID; Artist holds the show and ShowID its ID.
+	IsEpisode bool
+	ShowID    string
+}
+
+// PlaybackState bundles the current track with device-level playback state
+// so the UI can stay in sync when controlled from other clients.
+type PlaybackState struct {
+	Track      *Track
+	Volume     int
+	ShuffleOn  bool
+	RepeatMode RepeatMode
+	// ContextURI is the Spotify URI of the playlist/album/artist the current
+	// track is playing from (e.g. "spotify:playlist:..."). Empty when the
+	// track is playing outside any context. Lets the UI navigate back to the
+	// source of the currently playing track.
+	ContextURI string
+}
+
+type TrackSource interface {
+	CurrentPlayback(ctx context.Context) (*PlaybackState, error)
+	Play(ctx context.Context) error
+	Pause(ctx context.Context) error
+	Next(ctx context.Context) error
+	Previous(ctx context.Context) error
+	Seek(ctx context.Context, position time.Duration) error
+}

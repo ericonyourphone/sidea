@@ -1,0 +1,287 @@
+package app
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/charmbracelet/bubbles/list"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/ericonyourphone/sidea/source"
+)
+
+// SidebarSection identifies which section of the sidebar.
+type SidebarSection int
+
+const (
+	SectionLibrary SidebarSection = iota
+)
+
+// sidebarItem wraps a playlist for the bubbles/list.
+type sidebarItem struct {
+	playlist source.Playlist
+	icon     string // tiny rendered art icon (4x1 half-blocks)
+}
+
+func (s sidebarItem) Title() string {
+	if s.icon != "" {
+		return s.icon + " " + s.playlist.Name
+	}
+	return "♫ " + s.playlist.Name
+}
+
+func (s sidebarItem) Description() string {
+	if st, ok := libraryRowStyles[s.playlist.ID]; ok {
+		return st.desc
+	}
+	if s.playlist.TrackCount == 0 {
+		return ""
+	}
+	return fmt.Sprintf("%d tracks", s.playlist.TrackCount)
+}
+
+func (s sidebarItem) FilterValue() string {
+	return s.playlist.Name
+}
+
+// Sidebar is the left pane model.
+type Sidebar struct {
+	list       list.Model
+	section    SidebarSection
+	allItems   []list.Item // unfiltered library items (playlists), with icons
+	filterText string      // active filter query ("" = none); re-applied when items refresh
+	width      int
+	height     int
+}
+
+// sidebarDelegate builds the list delegate from the live palette.
+func sidebarDelegate() list.DefaultDelegate {
+	delegate := list.NewDefaultDelegate()
+	delegate.Styles.SelectedTitle = delegate.Styles.SelectedTitle.
+		Foreground(ColorAccent).
+		BorderForeground(ColorAccent)
+	delegate.Styles.SelectedDesc = delegate.Styles.SelectedDesc.
+		Foreground(ColorTextSec).
+		BorderForeground(ColorAccent)
+	return delegate
+}
+
+// Restyle re-applies palette-derived styles after a theme change.
+func (s *Sidebar) Restyle() {
+	s.list.SetDelegate(sidebarDelegate())
+	s.list.Styles.Title = StyleSectionHeader
+}
+
+func NewSidebar(width, height int) Sidebar {
+	delegate := sidebarDelegate()
+
+	l := list.New(nil, delegate, width-2, height-2)
+	l.Title = "LIBRARY"
+	l.SetShowHelp(false)
+	l.SetShowStatusBar(false)
+	l.SetFilteringEnabled(false)
+	l.Styles.Title = StyleSectionHeader
+
+	return Sidebar{
+		list:    l,
+		section: SectionLibrary,
+		width:   width,
+		height:  height,
+	}
+}
+
+func (s *Sidebar) SetPlaylists(playlists []source.Playlist) {
+	// Liked Songs first, then the collection rows, then the playlists. The
+	// library always starts with Liked Songs (source.Playlists puts it
+	// there); a list that doesn't isn't the library, and gets no rows.
+	items := make([]list.Item, 0, len(playlists)+len(libraryRows))
+	for i, pl := range playlists {
+		items = append(items, sidebarItem{playlist: pl})
+		if i == 0 && pl.ID == likedPlaylistID {
+			for _, row := range libraryRows {
+				items = append(items, sidebarItem{playlist: row, icon: libraryRowTile(row.ID)})
+			}
+		}
+	}
+	s.allItems = items
+	s.refreshVisible()
+}
+
+// AdjustPlaylistCount changes a playlist's displayed track count in place
+// (optimistic update after an add/remove, before the library is refetched).
+func (s *Sidebar) AdjustPlaylistCount(playlistID string, delta int) {
+	for i, item := range s.allItems {
+		if si, ok := item.(sidebarItem); ok && si.playlist.ID == playlistID {
+			si.playlist.TrackCount = max(0, si.playlist.TrackCount+delta)
+			s.allItems[i] = si
+		}
+	}
+	if s.section == SectionLibrary {
+		s.refreshVisible()
+	}
+}
+
+// SetPlaylistIcons updates the library playlist items with rendered art icons.
+// Merges into allItems (the library set) rather than the live list, so icons
+// are preserved correctly even if the user switched to the queue view.
+func (s *Sidebar) SetPlaylistIcons(icons map[string]string) {
+	if s.allItems == nil {
+		return
+	}
+	updated := make([]list.Item, len(s.allItems))
+	for i, item := range s.allItems {
+		if si, ok := item.(sidebarItem); ok {
+			if icon, found := icons[si.playlist.ID]; found {
+				si.icon = icon
+			}
+			updated[i] = si
+		} else {
+			updated[i] = item
+		}
+	}
+	s.allItems = updated
+	// Only update the live list if we're currently showing the library
+	if s.section == SectionLibrary {
+		s.refreshVisible()
+	}
+}
+
+// stripTrailingDupes removes trailing consecutive duplicates of the last
+// track, keeping at most one. Spotify fills the queue response with the
+// current track on repeat as padding — these won't actually play.
+func stripTrailingDupes(tracks []source.Track) []source.Track {
+	if len(tracks) < 2 {
+		return tracks
+	}
+	lastID := tracks[len(tracks)-1].ID
+	// Walk backwards to find where the trailing run starts.
+	cut := len(tracks)
+	for cut > 0 && tracks[cut-1].ID == lastID {
+		cut--
+	}
+	// Keep at most one of the trailing track (it may be the real "next up").
+	if cut < len(tracks) {
+		return tracks[:cut+1]
+	}
+	return tracks
+}
+
+func (s *Sidebar) Resize(width, height int) {
+	s.width = width
+	s.height = height
+	s.list.SetSize(width-2, height-2)
+}
+
+func (s *Sidebar) SelectedPlaylist() *source.Playlist {
+	item := s.list.SelectedItem()
+	if item == nil {
+		return nil
+	}
+	if si, ok := item.(sidebarItem); ok {
+		return &si.playlist
+	}
+	return nil
+}
+
+func (s *Sidebar) Section() SidebarSection {
+	return s.section
+}
+
+func (s *Sidebar) SetSection(sec SidebarSection) {
+	s.section = sec
+	s.filterText = "" // a filter belongs to the section it was typed in
+	s.list.Title = "LIBRARY"
+	// Restore the library items (with icons) that were saved in allItems.
+	if s.allItems != nil {
+		s.list.SetItems(s.allItems)
+	}
+	s.list.Select(0)
+}
+
+// baseItems returns the unfiltered item set.
+func (s *Sidebar) baseItems() []list.Item {
+	return s.allItems
+}
+
+// SetFilter filters the playlists by name. The filter persists across
+// background refreshes of the library until cleared.
+func (s *Sidebar) SetFilter(query string) {
+	s.filterText = query
+	s.refreshVisible()
+}
+
+// ClearFilter restores the full unfiltered item list for the current section.
+func (s *Sidebar) ClearFilter() {
+	s.filterText = ""
+	s.refreshVisible()
+}
+
+// refreshVisible rebuilds the live list from the current section's base items,
+// applying the active filter if any.
+func (s *Sidebar) refreshVisible() {
+	base := s.baseItems()
+	if s.filterText == "" {
+		s.list.SetItems(base)
+		return
+	}
+	q := strings.ToLower(s.filterText)
+	filtered := make([]list.Item, 0, len(base))
+	for _, item := range base {
+		if it, ok := item.(sidebarItem); ok && strings.Contains(strings.ToLower(it.playlist.Name), q) {
+			filtered = append(filtered, item)
+		}
+	}
+	s.list.SetItems(filtered)
+}
+
+// SetCursorFromClick maps a Y coordinate (relative to the pane top)
+// to a list item and selects it.
+func (s *Sidebar) SetCursorFromClick(y int) {
+	// Layout: 1 (border) + 1 (title) + 1 (blank) = 3 rows before items.
+	// Each item is 3 rows (2 content + 1 spacing) with the default delegate.
+	const headerRows = 3
+	const itemHeight = 3 // defaultHeight(2) + defaultSpacing(1)
+
+	row := y - headerRows
+	if row < 0 {
+		return
+	}
+	itemIdx := row / itemHeight
+
+	// Convert to global index accounting for pagination
+	globalIdx := s.list.Paginator.Page*s.list.Paginator.PerPage + itemIdx
+	if globalIdx < 0 || globalIdx >= len(s.list.Items()) {
+		return
+	}
+	s.list.Select(globalIdx)
+}
+
+// Move moves the cursor by n rows (negative is up), stopping at the ends.
+func (s *Sidebar) Move(n int) {
+	if total := len(s.list.Items()); total > 0 {
+		s.list.Select(max(0, min(total-1, s.list.Index()+n)))
+	}
+}
+
+// Goto puts the cursor on row i (clamped to the list).
+func (s *Sidebar) Goto(i int) {
+	if total := len(s.list.Items()); total > 0 {
+		s.list.Select(max(0, min(total-1, i)))
+	}
+}
+
+// HalfPage is half the rows on screen, what C-d/C-u move by.
+func (s *Sidebar) HalfPage() int { return max(1, s.list.Paginator.PerPage/2) }
+
+func (s Sidebar) Update(msg tea.Msg) (Sidebar, tea.Cmd) {
+	var cmd tea.Cmd
+	s.list, cmd = s.list.Update(msg)
+	return s, cmd
+}
+
+func (s Sidebar) View(active bool) string {
+	border := PaneBorder(active)
+	return border.
+		Width(s.width - 2).
+		Height(s.height - 2).
+		Render(s.list.View())
+}

@@ -1,0 +1,34 @@
+# Build artifacts
+waxon
+coverage.out
+dist/
+
+# OS
+.DS_Store
+
+# Secrets / credentials
+.env
+.env.*
+*.key
+*.pem
+
+# Demo
+waxon-demo
+
+# Claude Code
+.superpowers/
+docs/superpowers/
+result
+/site/dist/
+.vercel
+.env*
+
+/sidea
+/sidea-demo
+/build/
+/local/
+
+*.log
+**/credentials.json
+**/token.json
+/config.json

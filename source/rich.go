@@ -1,0 +1,238 @@
+package source
+
+import (
+	"context"
+	"errors"
+	"time"
+)
+
+// PlaybackSource provides playback control beyond basic TrackSource operations.
+type PlaybackSource interface {
+	SetVolume(ctx context.Context, percent int) error
+	SetShuffle(ctx context.Context, state bool) error
+	SetRepeat(ctx context.Context, mode RepeatMode) error
+	Devices(ctx context.Context) ([]Device, error)
+	TransferPlayback(ctx context.Context, deviceID string) error
+	PlayTrack(ctx context.Context, contextURI string, trackURI string) error
+	PlayTrackDirect(ctx context.Context, trackURI string) error
+	AddToQueue(ctx context.Context, trackID string) error
+}
+
+// LibrarySource provides access to the user's music library.
+type LibrarySource interface {
+	Queue(ctx context.Context) ([]Track, error)
+	Playlists(ctx context.Context) ([]Playlist, error)
+	PlaylistTracksPage(ctx context.Context, id string, offset, limit int) ([]Track, int, error)
+	LikedTracksPage(ctx context.Context, offset, limit int) ([]Track, int, error)
+	RecentlyPlayed(ctx context.Context) ([]Track, error)
+	SaveTrack(ctx context.Context, trackID string) error
+	RemoveTrack(ctx context.Context, trackID string) error
+	IsTrackSaved(ctx context.Context, trackID string) (bool, error)
+}
+
+// SearchSource provides search and browse capabilities.
+type SearchSource interface {
+	Search(ctx context.Context, query string) (*SearchResults, error)
+	GetArtist(ctx context.Context, artistID string) (*ArtistPage, error)
+	GetAlbum(ctx context.Context, albumID string) (*AlbumPage, error)
+}
+
+// CollectionSource lists the rest of the user's library: saved albums and
+// followed artists. Followed artists need the user-follow-read scope; an
+// older token gets ErrInsufficientScope.
+type CollectionSource interface {
+	SavedAlbums(ctx context.Context) ([]SavedAlbum, error)
+	FollowedArtists(ctx context.Context) ([]SearchArtist, error)
+	SavedShows(ctx context.Context) ([]Show, error)
+	// ShowEpisodesPage lists a show's episodes, newest first, as Tracks with
+	// IsEpisode set (and ID = the episode URI).
+	ShowEpisodesPage(ctx context.Context, showID string, offset, limit int) ([]Track, int, error)
+}
+
+// PlaylistSource mutates the user's playlists. Needs the playlist-modify
+// scopes; implementations return ErrInsufficientScope when the token
+// predates them so the UI can ask the user to re-authenticate.
+type PlaylistSource interface {
+	AddToPlaylist(ctx context.Context, playlistID, trackID string) error
+	// RemoveFromPlaylist removes the occurrence of trackID at position (its
+	// 0-based index in the playlist). A negative position removes every
+	// occurrence — callers should only use that when the position is unknown.
+	RemoveFromPlaylist(ctx context.Context, playlistID, trackID string, position int) error
+	CreatePlaylist(ctx context.Context, name string) (Playlist, error)
+}
+
+// LyricsSource provides lyrics for a track. Returns (nil, nil) when no lyrics
+// are available so callers can show an empty state without treating it as an
+// error.
+type LyricsSource interface {
+	Lyrics(ctx context.Context, track Track) (*Lyrics, error)
+}
+
+// RichSource combines all source capabilities. Implementations must satisfy
+// TrackSource, PlaybackSource, LibrarySource, SearchSource, PlaylistSource
+// and LyricsSource.
+type RichSource interface {
+	TrackSource
+	PlaybackSource
+	LibrarySource
+	SearchSource
+	PlaylistSource
+	LyricsSource
+	CollectionSource
+}
+
+// ArtistAlbum represents a simplified album in an artist's discography.
+type ArtistAlbum struct {
+	ID       string
+	Name     string
+	Year     string // extracted from release_date
+	Type     string // "Album" or "Single"
+	ImageURL string
+}
+
+// ArtistPage holds data for the artist detail view.
+type ArtistPage struct {
+	ID       string
+	Name     string
+	ImageURL string
+	Genres   []string
+	Tracks   []Track
+	Albums   []ArtistAlbum
+}
+
+// AlbumPage holds data for the album detail view.
+type AlbumPage struct {
+	ID       string
+	Name     string
+	Artist   string
+	Year     string // release year (first 4 chars of release_date)
+	ImageURL string
+	Tracks   []Track
+}
+
+// Show is a podcast the user follows.
+type Show struct {
+	ID        string
+	URI       string
+	Name      string
+	Publisher string
+	ImageURL  string
+}
+
+// SavedAlbum is an album in the user's library.
+type SavedAlbum struct {
+	ID       string
+	Name     string
+	Artist   string
+	Year     string
+	ImageURL string
+}
+
+type Playlist struct {
+	ID         string
+	URI        string
+	Name       string
+	ImageURL   string
+	TrackCount int
+	// Editable is true when the current user can add/remove tracks: they own
+	// the playlist or it is collaborative. Liked Songs is never Editable here
+	// (use Save/RemoveTrack).
+	Editable bool
+	// Snapshot is Spotify's version of the playlist's contents (its
+	// snapshot_id), which changes whenever tracks are added, removed or
+	// moved. "" when unknown (Liked Songs has none).
+	Snapshot string
+}
+
+type Device struct {
+	ID       string
+	Name     string
+	Type     string
+	IsActive bool
+}
+
+type SearchArtist struct {
+	ID       string
+	Name     string
+	ImageURL string
+}
+
+type SearchAlbum struct {
+	ID       string
+	Name     string
+	Artist   string
+	ImageURL string
+}
+
+type SearchResults struct {
+	Tracks  []Track
+	Artists []SearchArtist
+	Albums  []SearchAlbum
+}
+
+// LyricLine is a single line of lyrics. For synced lyrics, Time is the offset
+// from the start of the track at which the line should become active; for plain
+// lyrics, Time is zero.
+type LyricLine struct {
+	Time time.Duration
+	Text string
+}
+
+// Lyrics holds the lyrics for a track. Synced reports whether Lines carry real
+// timestamps (enabling auto-scroll/highlight); when false, Lines are plain text
+// with zero timestamps. Plain holds the unsynced text for copy/fallback when
+// available (empty for instrumentals). Lines is always the field to render;
+// Synced only selects the highlight behavior.
+//
+// Invariant: Lyrics is constructed solely by the lyrics package (fromResponse),
+// which keeps Synced consistent with Lines — callers should not build it ad hoc.
+type Lyrics struct {
+	Synced bool
+	Lines  []LyricLine
+	Plain  string
+}
+
+type RepeatMode string
+
+const (
+	RepeatOff     RepeatMode = "off"
+	RepeatContext RepeatMode = "context"
+	RepeatTrack   RepeatMode = "track"
+)
+
+// ErrNoActiveDevice is returned by playback commands when Spotify has no
+// active device to act on (the user has no Spotify client open anywhere).
+// The UI can recover by activating a device and retrying.
+var ErrNoActiveDevice = errors.New("no active Spotify device")
+
+// ErrInsufficientScope is returned when the saved token lacks a permission
+// the operation needs (e.g. playlist-modify after upgrading sidea). The fix
+// is to run 'sidea auth' again.
+var ErrInsufficientScope = errors.New("missing permission — run 'sidea auth' to grant it")
+
+// ErrForbidden is returned when Spotify refuses an endpoint for this app
+// outright (403 with no scope/premium reason). Spotify restricts
+// development-mode apps from some endpoints — notably library writes and
+// "contains" checks, and artist top tracks — so personal client IDs hit
+// this where the shared ID does not.
+var ErrForbidden = errors.New("not permitted for this Spotify app")
+
+// ErrPlaylistRestricted is returned when Spotify won't share a playlist's
+// tracks with this app. Development-mode apps can only read playlists the
+// user owns or collaborates on; others (including Spotify's own editorial
+// playlists) can still be played as a whole, just not listed.
+var ErrPlaylistRestricted = errors.New("spotify doesn't share this playlist's tracks with this app")
+
+// ErrPlaybackRestricted is returned when Spotify refuses a playback command
+// on the active device ("Restriction violated"). A device that was only just
+// activated answers this until it's ready, so a retry shortly after works.
+var ErrPlaybackRestricted = errors.New("spotify refused that playback command")
+
+// ErrDeviceUnavailable is returned when Spotify answers a playback command
+// with a server error, as it does for a device that has only just come
+// online (a Spotify app that's still starting); a retry shortly after works.
+var ErrDeviceUnavailable = errors.New("spotify couldn't reach that device")
+
+// ErrPremiumRequired is returned by playback commands when the account is
+// not Spotify Premium; the Web API only permits playback control for Premium.
+var ErrPremiumRequired = errors.New("premium account required for playback control")
