@@ -13,5 +13,5 @@ interface, search popup, playback highlighting, native audio stream, and
 FFT visualizer. See CHANGELOG.md and Git history for subsequent changes.
 
 The inherited interface documentation is retained in
-[docs/waxon-reference.md](docs/waxon-reference.md); Side A’s current
+[docs/inherited-reference.md](docs/inherited-reference.md); Side A’s current
 controls are documented in the top-level README.

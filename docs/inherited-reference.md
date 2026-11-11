@@ -1,16 +1,16 @@
-# Inherited Waxon interface reference
+# Inherited interface reference
 
-This is the original Waxon documentation retained for the legacy `app/`
-package and its documentation checks. For Side A’s actual interface and
-controls, use the project’s top-level README.md.
+This documentation is retained for the legacy `app/` package and its
+documentation checks. For Side A’s actual interface and controls, use the
+project’s top-level README.md.
 
 ---
 
 <p align="center">
-  <img src="assets/logo.png" width="128" alt="waxon logo">
+  <img src="assets/logo.png" width="128" alt="sidea logo">
 </p>
 
-<h1 align="center">waxon</h1>
+<h1 align="center">sidea</h1>
 
 <p align="center">
   A vim-modal Spotify client for the terminal.
@@ -25,12 +25,12 @@ controls, use the project’s top-level README.md.
 </p>
 
 <p align="center">
-  <img src="demo/recordings/full-tour.gif" alt="waxon demo" width="800">
+  <img src="demo/recordings/full-tour.gif" alt="sidea demo" width="800">
 </p>
 
 Browse your library, search, queue and play without leaving the home row.
 
-- **Plays by itself or drives the Spotify app.** waxon can be the player (no
+- **Plays by itself or drives the Spotify app.** sidea can be the player (no
   Spotify app needed), or the remote for your desktop app, phone or speakers;
   `M` switches between the two, carrying on from the same point.
 - **Vim all the way down:** `j`/`k`, counts, `gg`/`G`, visual mode, `:`
@@ -47,69 +47,30 @@ Requires **Spotify Premium**. Runs on macOS, Linux and Windows.
 
 ## Install
 
-**Homebrew** (macOS / Linux):
-
-```
-brew trust danfry1/tap        # once: Homebrew asks before using a third-party tap
-brew install danfry1/tap/waxon
-```
-
-<details>
-<summary>Coming from the waxon cask (1.7.0 – 1.10.0)?</summary>
-
-waxon is a Homebrew formula again, built from source instead of shipping an
-unsigned binary. If you trusted the tap, the next `brew update` installs the
-formula for you; then remove the old cask with
-`brew uninstall --cask --force waxon`. Otherwise:
-`brew uninstall --cask --force waxon && brew install danfry1/tap/waxon`.
-</details>
-
-**Nix** (flakes):
-
-```
-nix run github:danfry1/waxon              # run without installing
-nix profile install github:danfry1/waxon
-```
-
-**Scoop** (Windows):
-
-```
-scoop bucket add danfry1 https://github.com/danfry1/scoop-bucket
-scoop install waxon
-```
-
-**Go:**
-
-```
-go install github.com/danfry1/waxon@latest
-```
-
-**Linux packages / binaries:** every [release](https://github.com/danfry1/waxon/releases)
-ships `.deb`, `.rpm` and `.apk` packages plus `tar.gz`/`zip` archives (with
-SHA-256 checksums) for Linux, macOS and Windows on `amd64` and `arm64`.
+See the top-level README for how to build and install Side A.
 
 ## Quick Start
 
 ```bash
-waxon
+sidea
 ```
 
 The first run is a guided setup of about a minute: connect your Spotify
 account in the browser, then choose where music plays (your Spotify apps, or
-right here in waxon). Press `?` for help at any time.
+right here in sidea). Press `?` for help at any time.
 
 <p align="center">
   <img src="demo/recordings/setup.gif" alt="guided setup" width="700">
 </p>
 
-Something not working? `waxon doctor` checks everything and says what to fix.
+Something not working? `sidea doctor` checks everything and says what to fix.
 
 ## Playing & Devices
 
-waxon plays music in one of two ways, and `M` switches between them on this
+sidea plays music in one of two ways, and `M` switches between them on this
 computer, carrying on from the same point:
 
-- **In waxon.** waxon runs its own Spotify Connect device, `waxon (<host>)`,
+- **In sidea.** sidea runs its own Spotify Connect device, `sidea (<host>)`,
   through [librespot](https://github.com/librespot-org/librespot): no Spotify
   app needed. Setup offers to install librespot with your package manager
   (Homebrew, pacman, Nix or cargo) and signs it in; after that it starts in
@@ -118,10 +79,10 @@ computer, carrying on from the same point:
   speakers: nothing to install. If the Spotify app is installed but closed,
   `M` opens it and hands playback over once it's online.
 
-`D` picks any device on your account (its **play here with waxon** row sets
-up waxon's player if you skipped it), `:device <name>` switches by name, and
+`D` picks any device on your account (its **play here with sidea** row sets
+up sidea's player if you skipped it), `:device <name>` switches by name, and
 `:device -` goes back to the previous one. If nothing is playing when you
-press play, waxon picks for you: its own player when it's set up, the only
+press play, sidea picks for you: its own player when it's set up, the only
 device when there's one, or it asks.
 
 <p align="center">
@@ -131,33 +92,33 @@ device when there's one, or it asks.
 Setup can be re-run or changed at any time:
 
 ```bash
-waxon auth            # guided setup again
-waxon auth --own      # set up / switch to your own Spotify app
-waxon auth --shared   # use the shared app
-waxon auth --client-id <ID>
-waxon player          # is waxon's own player set up?
-waxon player login    # set it up (or sign it in again)
-waxon player off      # stop using it
-waxon logout          # forget the saved logins
+sidea auth            # guided setup again
+sidea auth --own      # set up / switch to your own Spotify app
+sidea auth --shared   # use the shared app
+sidea auth --client-id <ID>
+sidea player          # is sidea's own player set up?
+sidea player login    # set it up (or sign it in again)
+sidea player off      # stop using it
+sidea logout          # forget the saved logins
 ```
 
 **Your own Spotify app or the shared one.** Setup recommends creating your own
-(free) Spotify developer app; waxon lists the exact clicks, opens the dashboard
+(free) Spotify developer app; sidea lists the exact clicks, opens the dashboard
 and checks the Client ID as you paste it. The shared one needs no setup, but
 Spotify throttles it for everyone using it. See
 [Using your own Spotify app](#using-your-own-spotify-app).
 
 **Over SSH** (or whenever the browser is on another machine): open the sign-in
 link anywhere, approve, and paste the address the browser lands on into
-waxon. That page won't load, which is expected; waxon only needs its address.
+sidea. That page won't load, which is expected; sidea only needs its address.
 
 > **About the player login.** Spotify only lets its own apps stream audio, so
 > librespot — an open-source, unofficial Spotify Connect client (it also powers
 > spotifyd, raspotify and ncspot) — signs in as the Spotify desktop app, and
 > asks for the same broad permissions that app does. You approve on Spotify's
-> own sign-in page; your password never reaches waxon or librespot. The
-> resulting login token is saved only on your machine, in waxon's config
-> directory (`~/.config/waxon/librespot/`, or `%AppData%\waxon\librespot\` on
+> own sign-in page; your password never reaches sidea or librespot. The
+> resulting login token is saved only on your machine, in sidea's config
+> directory (`~/.config/sidea/librespot/`, or `%AppData%\sidea\librespot\` on
 > Windows), readable by you alone, and is sent nowhere but Spotify. Being
 > unofficial, librespot could stop working if Spotify changes something; the
 > player is opt-in for that reason.
@@ -174,7 +135,7 @@ Navigate everything without leaving the home row — `j`/`k` to move, `gg`/`G` t
 
 ### Small Terminals
 
-Below 80 columns waxon shows one pane at a time — `h`/`l`/`Tab` switch between library and tracks — and the track table drops columns rather than overflowing. Now Playing art scales to fit. Handy for a tmux side pane.
+Below 80 columns sidea shows one pane at a time — `h`/`l`/`Tab` switch between library and tracks — and the track table drops columns rather than overflowing. Now Playing art scales to fit. Handy for a tmux side pane.
 
 <p align="center">
   <img src="demo/recordings/narrow.gif" alt="narrow terminal layout" width="480">
@@ -190,11 +151,11 @@ Full-screen album art rendered with Unicode half-blocks over a gradient drawn fr
 
 ### Media Keys
 
-The keyboard's ⏯ ⏭ ⏮ keys control waxon, and the system's Now Playing (Control Center on macOS; GNOME, KDE and `playerctl` through MPRIS on Linux) shows the track, its cover and progress, with working buttons and scrubbing. They control whatever waxon is playing on: its own player, your phone or a speaker. If another music app is open it may take the keys first. Over SSH they're left alone: the keys belong to whoever is at the machine.
+The keyboard's ⏯ ⏭ ⏮ keys control sidea, and the system's Now Playing (Control Center on macOS; GNOME, KDE and `playerctl` through MPRIS on Linux) shows the track, its cover and progress, with working buttons and scrubbing. They control whatever sidea is playing on: its own player, your phone or a speaker. If another music app is open it may take the keys first. Over SSH they're left alone: the keys belong to whoever is at the machine.
 
 ### Queue
 
-`gq` shows the queue in the main pane, as the Spotify app does: **Now playing**, **Next in queue** (the tracks you added) and **Next from** the playlist (or **Up next**, when waxon can't tell them apart, as with shuffle on). Enter on a track skips forward to it, so the rest of the queue stays; the view follows along as tracks change.
+`gq` shows the queue in the main pane, as the Spotify app does: **Now playing**, **Next in queue** (the tracks you added) and **Next from** the playlist (or **Up next**, when sidea can't tell them apart, as with shuffle on). Enter on a track skips forward to it, so the rest of the queue stays; the view follows along as tracks change.
 
 <p align="center">
   <img src="demo/recordings/queue.gif" alt="the queue" width="800">
@@ -312,7 +273,7 @@ Vim-style commands for volume, shuffle, repeat, device switching, and more.
 | `/`   | Filter current view |
 | `s`   | Spotify search      |
 | `D`   | Device switcher     |
-| `M`   | Play in waxon ⇄ control the Spotify app |
+| `M`   | Play in sidea ⇄ control the Spotify app |
 | `:`   | Command mode        |
 
 ### Visual mode
@@ -345,7 +306,7 @@ In search, `Tab` moves from the query to the results, where `j`/`k` move and `a`
 
 ## Commands
 
-Enter command mode by pressing `:`, then type a command. As you type, the likeliest command shows dimmed after the cursor (and then what it takes); `Tab` or `→` accepts it. The playback commands read like the CLI's (`waxon next`, `waxon seek 1:30`).
+Enter command mode by pressing `:`, then type a command. As you type, the likeliest command shows dimmed after the cursor (and then what it takes); `Tab` or `→` accepts it. The playback commands read like the CLI's (`sidea next`, `sidea seek 1:30`).
 
 | Command                 | Description          |
 |-------------------------|----------------------|
@@ -375,9 +336,9 @@ Enter command mode by pressing `:`, then type a command. As you type, the likeli
 
 ## Configuration
 
-Press `,` (or `:settings`) to change the theme, album art, media keys, lyrics and the update check from inside waxon; each change is saved to the config file as you make it.
+Press `,` (or `:settings`) to change the theme, album art, media keys, lyrics and the update check from inside sidea; each change is saved to the config file as you make it.
 
-waxon reads `~/.config/waxon/config.json` — `%AppData%\waxon\config.json` on Windows, `$XDG_CONFIG_HOME/waxon` when that's set; `waxon config` prints the path. Everything is optional:
+sidea reads `~/.config/sidea/config.json` — `%AppData%\sidea\config.json` on Windows, `$XDG_CONFIG_HOME/sidea` when that's set; `sidea config` prints the path. Everything is optional:
 
 ```json
 {
@@ -387,47 +348,47 @@ waxon reads `~/.config/waxon/config.json` — `%AppData%\waxon\config.json` on W
 }
 ```
 
-**Themes** — built in: `spotify` (default), `catppuccin-mocha`, `catppuccin-latte`, `gruvbox`, `tokyonight`, `nord`, `dracula`, `rose-pine` (`waxon themes` lists them; waxon doesn't paint the terminal background, so pick a light theme like `catppuccin-latte` for a light terminal). Switch live with `:theme <name>` — it's saved to your config. `colors` overrides individual palette entries on top of any theme: `accent`, `bg`, `surface`, `text`, `text_sec`, `text_dim`, `border`, `error`, `mode_search`, `mode_filter`, `overlay`.
+**Themes** — built in: `spotify` (default), `catppuccin-mocha`, `catppuccin-latte`, `gruvbox`, `tokyonight`, `nord`, `dracula`, `rose-pine` (`sidea themes` lists them; sidea doesn't paint the terminal background, so pick a light theme like `catppuccin-latte` for a light terminal). Switch live with `:theme <name>` — it's saved to your config. `colors` overrides individual palette entries on top of any theme: `accent`, `bg`, `surface`, `text`, `text_sec`, `text_dim`, `border`, `error`, `mode_search`, `mode_filter`, `overlay`.
 
 <p align="center">
   <img src="demo/recordings/themes.gif" alt="switching themes with :theme" width="800">
 </p>
 
-**Keys** — `keys` maps an action to a comma-separated list of keys (Bubbletea names: `j`, `down`, `ctrl+d`, `space`, `enter`, `esc`, `tab`, `backspace`, `f1`…). Actions: `up down bottom half_up half_down focus_left focus_right cycle_pane enter play_pause next prev seek_fwd seek_back vol_up vol_down mute shuffle repeat visual add_queue like like_playing actions actions_playing devices mode back filter search command help now_playing settings quit`. The `g`-prefix motions (`gg gl gq gc ga gA`) and `Esc` are fixed. The `?` help overlay always shows your live bindings. If a custom key is misspelt, has no keys, or is already another action's, waxon says so when it starts and uses the rest.
+**Keys** — `keys` maps an action to a comma-separated list of keys (Bubbletea names: `j`, `down`, `ctrl+d`, `space`, `enter`, `esc`, `tab`, `backspace`, `f1`…). Actions: `up down bottom half_up half_down focus_left focus_right cycle_pane enter play_pause next prev seek_fwd seek_back vol_up vol_down mute shuffle repeat visual add_queue like like_playing actions actions_playing devices mode back filter search command help now_playing settings quit`. The `g`-prefix motions (`gg gl gq gc ga gA`) and `Esc` are fixed. The `?` help overlay always shows your live bindings. If a custom key is misspelt, has no keys, or is already another action's, sidea says so when it starts and uses the rest.
 
-**Player** — `"player": "librespot"` (set by `waxon player login`) runs waxon's own playback device; `"player_path"` points at a librespot binary that isn't on `PATH`. librespot's log goes to the `WAXON_LOG` file when set.
+**Player** — `"player": "librespot"` (set by `sidea player login`) runs sidea's own playback device; `"player_path"` points at a librespot binary that isn't on `PATH`. librespot's log goes to the `SIDEA_LOG` file when set.
 
 **Lyrics** — `"lyrics": false` turns synced lyrics off (see [Privacy & Network](#privacy--network)).
 
-**Update check** — once a day at most, when it starts, waxon asks GitHub for the latest release; if it's newer, waxon says so and, as it quits, prints the command that upgrades it (`brew upgrade waxon`, `scoop update waxon` or `go install …`, by how it was installed). `"update_check": false` turns it off.
+**Update check** — once a day at most, when it starts, sidea asks GitHub for the latest release; if it's newer, sidea says so and, as it quits, prints the command that upgrades it (`brew upgrade sidea`, `scoop update sidea` or `go install …`, by how it was installed). `"update_check": false` turns it off.
 
 **Media keys** — on by default on macOS and Linux; `"media_keys": false` turns them and the Now Playing entry off.
 
-**Art** — `"art": "kitty"` draws the status-bar and Now Playing covers as real images using the kitty graphics protocol (kitty, Ghostty); `"auto"` does that only when the terminal is detected as supporting it (not inside tmux), and `"blocks"` (the default) keeps the Unicode half-block art. `WAXON_ART` overrides the setting for one run, e.g. `WAXON_ART=kitty waxon`. Experimental: please report terminals where it misbehaves.
+**Art** — `"art": "kitty"` draws the status-bar and Now Playing covers as real images using the kitty graphics protocol (kitty, Ghostty); `"auto"` does that only when the terminal is detected as supporting it (not inside tmux), and `"blocks"` (the default) keeps the Unicode half-block art. `SIDEA_ART` overrides the setting for one run, e.g. `SIDEA_ART=kitty sidea`. Experimental: please report terminals where it misbehaves.
 
-**Cache** — album art is cached under `$XDG_CACHE_HOME/waxon/images` (or your OS cache dir), capped at 64 MB and pruned on launch, so relaunching paints the library instantly. Delete the directory to clear it.
+**Cache** — album art is cached under `$XDG_CACHE_HOME/sidea/images` (or your OS cache dir), capped at 64 MB and pruned on launch, so relaunching paints the library instantly. Delete the directory to clear it.
 
 **Colour fallback** — colours degrade automatically on 256-colour terminals and are dropped under `NO_COLOR`; album art uses the 256-colour cube where true colour isn't available and is skipped entirely on monochrome terminals.
 
 ## Scripting & Status Bars
 
-Every playback action is also a plain subcommand, so waxon slots into tmux,
+Every playback action is also a plain subcommand, so sidea slots into tmux,
 waybar/polybar, hotkey daemons and shell scripts without opening the TUI.
 
 ```
-waxon status                      # ▶ Let It Happen — Tame Impala
-waxon status --json               # {"playing":true,"title":...,"progress":37,...}
-waxon status --waybar             # {"text":"…","alt":"playing","class":"playing",...}
-waxon status --format '{icon} {title} [{position}/{duration}]'
-waxon play | pause | toggle | next | prev
-waxon play daft punk get lucky    # search, then play the first match
-waxon seek +10 | seek -10 | seek 1:30
-waxon vol 40 | vol +5 | vol -5
-waxon shuffle [on|off] | repeat off|all|one
-waxon like                        # toggle Liked Songs for the playing track
-waxon queue instant crush
-waxon devices | device "living room"
-waxon search radiohead [--json]
+sidea status                      # ▶ Let It Happen — Tame Impala
+sidea status --json               # {"playing":true,"title":...,"progress":37,...}
+sidea status --waybar             # {"text":"…","alt":"playing","class":"playing",...}
+sidea status --format '{icon} {title} [{position}/{duration}]'
+sidea play | pause | toggle | next | prev
+sidea play daft punk get lucky    # search, then play the first match
+sidea seek +10 | seek -10 | seek 1:30
+sidea vol 40 | vol +5 | vol -5
+sidea shuffle [on|off] | repeat off|all|one
+sidea like                        # toggle Liked Songs for the playing track
+sidea queue instant crush
+sidea devices | device "living room"
+sidea search radiohead [--json]
 ```
 
 `status` prints nothing when idle (so bars stay blank) and exits non-zero on
@@ -438,13 +399,13 @@ is active, commands activate the only available one automatically, or tell you
 which ones to choose from.
 
 <p align="center">
-  <img src="demo/recordings/cli.gif" alt="waxon CLI subcommands" width="800">
+  <img src="demo/recordings/cli.gif" alt="sidea CLI subcommands" width="800">
 </p>
 
 **tmux** (`~/.tmux.conf`):
 
 ```
-set -g status-right '#(waxon status --format "{icon} {title} — {artist}") | %H:%M'
+set -g status-right '#(sidea status --format "{icon} {title} — {artist}") | %H:%M'
 set -g status-interval 5
 ```
 
@@ -453,13 +414,13 @@ set -g status-interval 5
 
 ```json
 "custom/spotify": {
-  "exec": "waxon status --waybar",
+  "exec": "sidea status --waybar",
   "return-type": "json",
   "format": "{icon} {}",
   "format-icons": {"playing": "", "paused": "", "idle": ""},
-  "on-click": "waxon toggle",
-  "on-scroll-up": "waxon vol +5",
-  "on-scroll-down": "waxon vol -5",
+  "on-click": "sidea toggle",
+  "on-scroll-up": "sidea vol +5",
+  "on-scroll-down": "sidea vol -5",
   "interval": 5
 }
 ```
@@ -467,82 +428,82 @@ set -g status-interval 5
 **Hotkeys** (skhd on macOS / sxhkd on Linux):
 
 ```
-cmd + alt - space : waxon toggle
-cmd + alt - right : waxon next
-cmd + alt - left  : waxon prev
-cmd + alt - l     : waxon like
+cmd + alt - space : sidea toggle
+cmd + alt - right : sidea next
+cmd + alt - left  : sidea prev
+cmd + alt - l     : sidea like
 ```
 
 ## Privacy & Network
 
-waxon has no telemetry and no analytics. It connects to:
+sidea has no telemetry and no analytics. It connects to:
 
 | Host | For |
 |---|---|
 | `accounts.spotify.com`, `api.spotify.com` | Signing in, and everything you do (Spotify's Web API) |
 | Spotify's image servers (`*.scdn.co`) | Album and playlist covers |
 | `lrclib.net` | Synced lyrics: the track's title, artist, album and length are sent to look them up |
-| `api.github.com` | Once a day at most, at launch: the latest waxon release, to say when there's a newer one. Nothing is sent but the request |
-| Spotify's streaming servers | Only waxon's own player (librespot), when you use it |
+| `api.github.com` | Once a day at most, at launch: the latest sidea release, to say when there's a newer one. Nothing is sent but the request |
+| Spotify's streaming servers | Only sidea's own player (librespot), when you use it |
 
 Sign-in uses PKCE: there's no client secret, and your password goes only to
-Spotify's own sign-in page. Logins and settings are stored in waxon's config
-directory (`waxon config` prints it), readable by you alone.
+Spotify's own sign-in page. Logins and settings are stored in sidea's config
+directory (`sidea config` prints it), readable by you alone.
 
-**Talking only to Spotify.** `"lyrics": false` in `config.json` stops waxon
+**Talking only to Spotify.** `"lyrics": false` in `config.json` stops sidea
 contacting lrclib, and `"update_check": false` stops it contacting GitHub, so
 it talks only to Spotify (useful on a work network). If a
-proxy or firewall blocks lrclib, waxon leaves it alone for ten minutes instead
+proxy or firewall blocks lrclib, sidea leaves it alone for ten minutes instead
 of asking on every track; `l` tries again sooner.
 
-**Proxies.** waxon uses `HTTPS_PROXY` / `NO_PROXY` when they're set; on macOS
+**Proxies.** sidea uses `HTTPS_PROXY` / `NO_PROXY` when they're set; on macOS
 it otherwise picks up the HTTPS proxy from System Settings, as other apps do.
 A proxy chosen by a PAC script can't be followed: set `HTTPS_PROXY` yourself
-(`waxon doctor` says when that's needed), or `HTTPS_PROXY=` (empty) to ignore
-macOS's. waxon's own player (librespot) doesn't use these settings.
+(`sidea doctor` says when that's needed), or `HTTPS_PROXY=` (empty) to ignore
+macOS's. sidea's own player (librespot) doesn't use these settings.
 
 ## Using Your Own Spotify App
 
-waxon works out of the box with no configuration — it ships with a shared client ID used by several open-source Spotify clients. Spotify rate-limits that shared app as a whole, so at busy times you may see *Spotify rate limit* toasts or sluggish controls. A personal client ID has its own quota and takes two minutes to set up:
+sidea works out of the box with no configuration — it ships with a shared client ID used by several open-source Spotify clients. Spotify rate-limits that shared app as a whole, so at busy times you may see *Spotify rate limit* toasts or sluggish controls. A personal client ID has its own quota and takes two minutes to set up:
 
 1. Go to the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and create an app
 2. Set the redirect URI to `http://127.0.0.1:27228/callback`
 3. Copy the **Client ID** and run setup with it:
 
    ```
-   SPOTIFY_CLIENT_ID=your_client_id waxon auth
+   SPOTIFY_CLIENT_ID=your_client_id sidea auth
    ```
 
-The client ID is saved to waxon's `config.json` (see `waxon config`) automatically, so you only need to set the environment variable once during setup.
+The client ID is saved to sidea's `config.json` (see `sidea config`) automatically, so you only need to set the environment variable once during setup.
 
-> **Note:** new developer apps are in Spotify's *development mode*, which only allows the current API endpoints. waxon uses those (with legacy fallbacks for older apps), so playback, search, queue, liking and playlist editing all work. Spotify blocks two things for development-mode apps with no replacement: an artist's *top tracks* (artist pages show the discography instead), and the track list of playlists you don't own or collaborate on, including Spotify's own editorial playlists (waxon says so; Enter still plays the playlist, and `o` can open it in Spotify).
+> **Note:** new developer apps are in Spotify's *development mode*, which only allows the current API endpoints. sidea uses those (with legacy fallbacks for older apps), so playback, search, queue, liking and playlist editing all work. Spotify blocks two things for development-mode apps with no replacement: an artist's *top tracks* (artist pages show the discography instead), and the track list of playlists you don't own or collaborate on, including Spotify's own editorial playlists (sidea says so; Enter still plays the playlist, and `o` can open it in Spotify).
 
 ## Troubleshooting
 
-Start with `waxon doctor`. It checks your config, Spotify app, login (and
-whether Spotify accepts it), devices, waxon's player, the lyrics service and
+Start with `sidea doctor`. It checks your config, Spotify app, login (and
+whether Spotify accepts it), devices, sidea's player, the lyrics service and
 your terminal, and prints the fix for anything wrong.
 
 | Symptom | Cause / fix |
 |---|---|
-| *Spotify rate limit* / *Spotify is rate limiting* toasts | Spotify is throttling the app. waxon backs off automatically and honours Spotify's `Retry-After`. If it keeps happening, the shared client ID is busy — [use your own](#using-your-own-spotify-app). |
-| *No active Spotify device* | Spotify must be open somewhere (desktop, phone, speaker), or let waxon play by itself: `D` → **play here with waxon**. waxon picks the only available device automatically or asks with `D`. |
+| *Spotify rate limit* / *Spotify is rate limiting* toasts | Spotify is throttling the app. sidea backs off automatically and honours Spotify's `Retry-After`. If it keeps happening, the shared client ID is busy — [use your own](#using-your-own-spotify-app). |
+| *No active Spotify device* | Spotify must be open somewhere (desktop, phone, speaker), or let sidea play by itself: `D` → **play here with sidea**. sidea picks the only available device automatically or asks with `D`. |
 | *Not available with this Spotify app* | Spotify blocks that endpoint for development-mode (personal) apps — currently only artists' top tracks. |
 | A followed playlist shows no tracks | Spotify only lets development-mode (personal) apps list playlists you own or collaborate on. Press Enter to play it anyway, or `o` to open it in Spotify. |
-| *Permission needed — run `waxon auth`* | Your saved token predates a feature that needs extra permissions (e.g. playlist editing). Re-run `waxon auth` once. |
-| *Session expired* | Token revoked or refresh failed. Re-run `waxon auth`. |
+| *Permission needed — run `sidea auth`* | Your saved token predates a feature that needs extra permissions (e.g. playlist editing). Re-run `sidea auth` once. |
+| *Session expired* | Token revoked or refresh failed. Re-run `sidea auth`. |
 | Nothing renders / garbled colours | Set a true-colour or 256-colour `TERM`, or `NO_COLOR=1` for monochrome. Minimum size is 40×10. |
 
-Debug log: `WAXON_LOG=/tmp/waxon.log waxon` (includes rate-limit `Retry-After` values).
+Debug log: `SIDEA_LOG=/tmp/sidea.log sidea` (includes rate-limit `Retry-After` values).
 
 ## Environment Variables
 
 | Variable            | Description                        |
 |---------------------|------------------------------------|
 | `SPOTIFY_CLIENT_ID` | Override the saved Spotify Client ID |
-| `WAXON_LOG`         | Path to debug log file (e.g. `/tmp/waxon.log`) |
-| `WAXON_ART`         | Override the `art` setting for one run (`blocks`, `kitty`, `auto`) |
-| `WAXON_NO_BROWSER`  | Don't launch a browser during `waxon auth`; just print the URL (SSH) |
+| `SIDEA_LOG`         | Path to debug log file (e.g. `/tmp/sidea.log`) |
+| `SIDEA_ART`         | Override the `art` setting for one run (`blocks`, `kitty`, `auto`) |
+| `SIDEA_NO_BROWSER`  | Don't launch a browser during `sidea auth`; just print the URL (SSH) |
 
 ## Releasing
 

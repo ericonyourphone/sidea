@@ -1,6 +1,6 @@
 # Security notes
 
-Side A is an early local development build derived from Waxon. It has no
+Side A is an early local development build derived from an upstream GPL-3.0 project (see UPSTREAM.md). It has no
 published release or separate security support program yet.
 
 Keep Spotify tokens, player credentials, debug logs, and personal settings

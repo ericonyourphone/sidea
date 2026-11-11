@@ -4,7 +4,7 @@
 
 - Introduce a cassette terminal interface with a separate library, queue,
   progress bar, and clickable transport controls.
-- Reuse Waxon's Spotify client, authentication, media support, and eight
+- Reuse the upstream Spotify client, authentication, media support, and eight
   themes with a separate Side A config directory.
 - Include native Mac playback and a live dotted FFT spectrum.
 - Add track search, saved-album and playlist browsing, device selection,

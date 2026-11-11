@@ -1,5 +1,4 @@
 # Build artifacts
-waxon
 coverage.out
 dist/
 
@@ -11,9 +10,6 @@ dist/
 .env.*
 *.key
 *.pem
-
-# Demo
-waxon-demo
 
 # Claude Code
 .superpowers/

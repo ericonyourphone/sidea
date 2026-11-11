@@ -133,7 +133,7 @@ should not be committed.
 
 ## License
 
-GPL-3.0. Based on [Waxon](https://github.com/danfry1/waxon), with a new
+GPL-3.0. Derived from an upstream GPL-3.0 project, with a new
 interface and native audio spectrum work added on November 10, 2026.
 See [LICENSE](LICENSE) and [attribution](UPSTREAM.md).
 

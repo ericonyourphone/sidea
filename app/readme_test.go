@@ -33,7 +33,7 @@ func readmeConfigList(t *testing.T, readme, marker string) []string {
 // documentation in step with its controls. Side A's ui package has its own
 // controls documented in the top-level README.
 func TestReadmeMatchesKeymap(t *testing.T) {
-	b, err := os.ReadFile("../docs/waxon-reference.md")
+	b, err := os.ReadFile("../docs/inherited-reference.md")
 	if err != nil {
 		t.Fatal(err)
 	}
