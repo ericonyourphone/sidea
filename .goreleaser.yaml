@@ -1,0 +1,70 @@
+version: 2
+
+project_name: sidea
+
+builds:
+  - id: sidea
+    main: .
+    binary: sidea
+    # Side A has no cgo: audio and media keys go through purego, so every
+    # platform cross-compiles from one machine.
+    env:
+      - CGO_ENABLED=0
+    tags:
+      - demo
+    goos: [darwin, linux, windows]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w -X main.version={{.Version}}
+
+archives:
+  - id: sidea
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - LICENSE
+      - UPSTREAM.md
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  disable: true
+
+release:
+  github:
+    owner: ericonyourphone
+    name: sidea
+  prerelease: auto
+
+# Homebrew: published to ericonyourphone/homebrew-sidea on each release.
+brews:
+  - name: sidea
+    repository:
+      owner: ericonyourphone
+      name: homebrew-sidea
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+    homepage: https://github.com/ericonyourphone/sidea
+    description: A cassette for your Spotify, in the terminal
+    license: GPL-3.0-only
+    dependencies:
+      - librespot
+    test: |
+      assert_match "sidea", shell_output("#{bin}/sidea version")
+
+# Scoop: published to ericonyourphone/scoop-sidea on each release.
+scoops:
+  - name: sidea
+    repository:
+      owner: ericonyourphone
+      name: scoop-sidea
+      token: "{{ .Env.TAP_GITHUB_TOKEN }}"
+    homepage: https://github.com/ericonyourphone/sidea
+    description: A cassette for your Spotify, in the terminal
+    license: GPL-3.0-only
+    post_install:
+      - 'Write-Host "Side A also needs librespot for playback (cargo install librespot)"'
