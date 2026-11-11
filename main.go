@@ -190,12 +190,16 @@ func main() {
 		}
 		return 0
 	}
+	var code int
 	if !mediaKeys {
-		os.Exit(run())
+		code = run()
+	} else {
+		// On macOS the media controls need the main thread's event loop, so
+		// the TUI runs beside it.
+		code = media.RunMain(run)
 	}
-	// On macOS the media controls need the main thread's event loop, so the
-	// TUI runs beside it.
-	os.Exit(media.RunMain(run))
+	cleanup()
+	os.Exit(code) //nolint:gocritic // cleanup called above
 }
 
 // graphicsOut is the Program's output when kitty art is on (see

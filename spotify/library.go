@@ -29,6 +29,8 @@ const apiBase = "https://api.spotify.com/v1"
 
 type apiPlaylistPage struct {
 	Items []apiSimplePlaylist `json:"items"`
+	// Next is the URL of the following page, empty on the last one.
+	Next string `json:"next"`
 }
 
 type apiSimplePlaylist struct {
@@ -142,6 +144,17 @@ func pickImageURL(images []apiImage, minPx int) string {
 		}
 	}
 	return ""
+}
+
+// listItemToSource converts a playlist or liked-songs entry. Spotify returns
+// null for removed or unavailable items, which decodes to an all-empty
+// apiTrack; that becomes a labelled, non-selectable row (not dropped, because
+// paging offsets count rows) so it can't be played, queued or liked.
+func listItemToSource(t apiTrack) source.Track {
+	if t.URI == "" && t.ID == "" && t.Name == "" {
+		return source.Track{IsSeparator: true, Name: "Unavailable track"}
+	}
+	return apiTrackToSource(t)
 }
 
 // apiTrackToSource converts an apiTrack to a source.Track.
@@ -332,6 +345,12 @@ func (p *PlayerSource) Playlists(ctx context.Context) ([]source.Playlist, error)
 		var page apiPlaylistPage
 		path := fmt.Sprintf("/me/playlists?limit=50&offset=%d", offset)
 		if err := p.apiGet(ctx, path, &page); err != nil {
+			if offset > 0 && ctx.Err() == nil {
+				// A later page failed: show the playlists already fetched
+				// rather than losing the whole sidebar.
+				slog.Warn("failed to fetch more playlists; showing those loaded so far", "offset", offset, "error", err)
+				break
+			}
 			return nil, err
 		}
 		if len(page.Items) == 0 {
@@ -354,8 +373,8 @@ func (p *PlayerSource) Playlists(ctx context.Context) ([]source.Playlist, error)
 			})
 		}
 		offset += len(page.Items)
-		if len(page.Items) < 50 {
-			break // last page
+		if page.Next == "" && len(page.Items) < 50 {
+			break // last page: no next link and not a full page
 		}
 	}
 	return playlists, nil
@@ -374,7 +393,7 @@ func (p *PlayerSource) PlaylistTracksPage(ctx context.Context, id string, offset
 		if full.Items != nil {
 			tracks := make([]source.Track, 0, len(full.Items.Items))
 			for _, item := range full.Items.Items {
-				tracks = append(tracks, apiTrackToSource(item.Item))
+				tracks = append(tracks, listItemToSource(item.Item))
 			}
 			return tracks, full.Items.Total, nil
 		}
@@ -400,7 +419,7 @@ func (p *PlayerSource) PlaylistTracksPage(ctx context.Context, id string, offset
 	}
 	tracks := make([]source.Track, 0, len(page.Items))
 	for _, item := range page.Items {
-		tracks = append(tracks, apiTrackToSource(item.Item))
+		tracks = append(tracks, listItemToSource(item.Item))
 	}
 	return tracks, page.Total, nil
 }
@@ -432,7 +451,7 @@ func (p *PlayerSource) LikedTracksPage(ctx context.Context, offset, limit int) (
 	}
 	tracks := make([]source.Track, 0, len(page.Items))
 	for _, item := range page.Items {
-		tracks = append(tracks, apiTrackToSource(item.Track))
+		tracks = append(tracks, listItemToSource(item.Track))
 	}
 	return tracks, page.Total, nil
 }

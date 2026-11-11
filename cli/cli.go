@@ -371,10 +371,11 @@ func (r *Runner) play(ctx context.Context, args []string) error {
 	return r.withDevice(ctx, func() error { return playTrack(ctx, r.Src, track) })
 }
 
-// playURI starts playback of a Spotify URI: a track plays on its own, any
-// other URI (album/playlist/artist) plays as a context.
+// playURI starts playback of a Spotify URI: a track or podcast episode plays
+// on its own (Spotify only accepts those in the uris list), any other URI
+// (album/playlist/artist) plays as a context.
 func playURI(ctx context.Context, src source.RichSource, uri string) error {
-	if strings.HasPrefix(uri, "spotify:track:") {
+	if strings.HasPrefix(uri, "spotify:track:") || strings.HasPrefix(uri, "spotify:episode:") {
 		return src.PlayTrackDirect(ctx, uri)
 	}
 	return src.PlayTrack(ctx, uri, "")

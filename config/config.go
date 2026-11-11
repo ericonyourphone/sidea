@@ -135,7 +135,8 @@ func Load() (Config, error) {
 
 // Save merges cfg into the existing config on disk and writes it back.
 // Fields that are zero-valued in cfg are left unchanged on disk, so
-// callers only need to set the fields they want to update.
+// callers only need to set the fields they want to update. To reset a
+// field to its default, use Clear.
 func Save(cfg Config) error {
 	return saveTo(DefaultPath(), cfg)
 }
@@ -178,11 +179,65 @@ func saveTo(path string, updates Config) error {
 	if err != nil {
 		return fmt.Errorf("marshal config: %w", err)
 	}
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
+	return WriteFileAtomic(path, data)
+}
+
+// WriteFileAtomic writes data to path (mode 0600) through a uniquely named
+// temp file in the same directory, then renames it into place. A unique temp
+// name means two sidea processes saving at once can't collide on one file.
+func WriteFileAtomic(path string, data []byte) error {
+	f, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".*.tmp") // 0o600
+	if err != nil {
 		return err
 	}
-	return os.Rename(tmp, path)
+	tmp := f.Name()
+	if _, err := f.Write(data); err != nil {
+		_ = f.Close()
+		_ = os.Remove(tmp)
+		return err
+	}
+	if err := f.Close(); err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
+	return nil
+}
+
+// Clear removes the given keys (JSON names such as "theme" or "player_path")
+// from the config file so they fall back to their defaults. Save can't do
+// this, since it treats zero values as "leave unchanged".
+func Clear(keys ...string) error {
+	return clearIn(DefaultPath(), keys...)
+}
+
+func clearIn(path string, keys ...string) error {
+	if _, err := loadFrom(path); err != nil {
+		return fmt.Errorf("%w (fix or delete %s, then try again)", err, path)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	out := map[string]json.RawMessage{}
+	_ = json.Unmarshal(bytes.TrimPrefix(data, []byte("\xef\xbb\xbf")), &out)
+	if out == nil {
+		return nil
+	}
+	for _, k := range keys {
+		delete(out, k)
+	}
+	data, err = json.MarshalIndent(out, "", "  ")
+	if err != nil {
+		return fmt.Errorf("marshal config: %w", err)
+	}
+	return WriteFileAtomic(path, data)
 }
 
 // marshalKeepingUnknown encodes cfg over the keys already in the file at

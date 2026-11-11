@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"sync"
@@ -24,13 +25,10 @@ func SaveToken(path string, token *oauth2.Token) error {
 	if err != nil {
 		return fmt.Errorf("marshal token: %w", err)
 	}
-	// Atomic write: write to temp file then rename to prevent corruption
-	// if the process is interrupted mid-write.
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
-		return err
-	}
-	return os.Rename(tmp, path)
+	// Atomic write through a uniquely named temp file: no corruption if the
+	// process is interrupted, and no collision with another sidea refreshing
+	// the token at the same time.
+	return config.WriteFileAtomic(path, data)
 }
 
 // DeleteToken removes a saved token. A token that isn't there is not an
@@ -67,6 +65,7 @@ type PersistingTokenSource struct {
 	path      string
 	mu        sync.Mutex
 	lastSaved string
+	warned    string // access token whose failed save was already logged
 }
 
 // NewPersistingTokenSource wraps base so that any refreshed token is
@@ -98,7 +97,12 @@ func (p *PersistingTokenSource) Token() (*oauth2.Token, error) {
 		// Log but don't fail: the in-memory token still works for this session,
 		// but the next startup may require re-auth if this keeps failing.
 		if saveErr := SaveToken(p.path, tok); saveErr != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "warning: failed to save refreshed token: %v\n", saveErr)
+			// Not stderr: the TUI owns the screen. Warn once per token
+			// rather than on every API call.
+			if p.warned != tok.AccessToken {
+				slog.Warn("failed to save refreshed token", "error", saveErr)
+				p.warned = tok.AccessToken
+			}
 		} else {
 			p.lastSaved = tok.AccessToken
 		}
