@@ -14,7 +14,13 @@ Built for macOS and Spotify Premium. It also builds and runs on Windows
 
 ### macOS
 
-Install the dependencies and build from source:
+With Homebrew (installs librespot too):
+
+```sh
+brew install ericonyourphone/sidea/sidea
+```
+
+Or build from source:
 
 ```sh
 brew install go librespot
@@ -29,9 +35,23 @@ which must be on your shell’s PATH.
 
 ### Windows
 
-You need [Git](https://git-scm.com/download/win), Go, and librespot. In
-PowerShell, using [Scoop](https://scoop.sh) for Go and
-[Rust](https://rustup.rs) (Cargo) for librespot, which Scoop doesn't carry:
+With [Scoop](https://scoop.sh) (librespot isn't in Scoop, so install it with
+[Rust](https://rustup.rs)'s Cargo):
+
+```powershell
+scoop bucket add sidea https://github.com/ericonyourphone/scoop-sidea
+scoop install sidea
+cargo install librespot
+```
+
+The release binaries aren't code-signed. If Windows **Smart App Control** is
+on, it blocks them ("An Application Control policy has blocked this file").
+In that case build from source as below, which produces a binary Windows
+accepts, or turn Smart App Control off in Windows Security (turning it back
+on later requires resetting Windows).
+
+Or build from source. You need [Git](https://git-scm.com/download/win), Go,
+and librespot. In PowerShell:
 
 ```powershell
 scoop install go
