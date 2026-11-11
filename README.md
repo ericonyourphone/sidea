@@ -156,9 +156,9 @@ Settings and authentication are stored under `~/.config/sidea/` (or
 `$XDG_CONFIG_HOME/sidea/`); they are never project files. Each installation
 keeps its own Spotify login and local-player credentials there.
 
-Audio: librespot requests 320 kbps, decodes stereo 16-bit/44.1 kHz PCM,
-and sends it to Oto's native Mac audio output. The spectrum analyzes a copy
-of the samples consumed by that output. The audio is not recorded.
+Audio: librespot requests 320 kbps, decodes stereo 16-bit/44.1 kHz PCM.
+The spectrum analyzes a copy of the samples consumed by that output. 
+The audio is not recorded.
 
 ## Development
 
@@ -181,8 +181,7 @@ The optional GitHub Actions check is provided in `ci/github-actions.yml`.
 To enable it, move it to `.github/workflows/ci.yml` using a GitHub login
 with permission to manage workflows.
 
-Side A is an early development project. No packaged release or Homebrew
-formula is available yet. `SIDEA_LOG=/path/to/log sidea`
+Side A is an early development project. `SIDEA_LOG=/path/to/log sidea`
 enables diagnostic logging. Log files can contain listening history and
 should not be committed.
 
