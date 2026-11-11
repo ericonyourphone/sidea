@@ -5,11 +5,14 @@
 A terminal Spotify player with a pixel cassette, separate library, track
 controls, queue, a live centered spectrum, and eight color themes.
 
-Built for macOS and Spotify Premium.
+Built for macOS and Spotify Premium. It also builds and runs on Windows
+(see below); Windows audio output has had less testing than macOS.
 
 ![Side A player](docs/sidea-preview.png)
 
 ## Get started
+
+### macOS
 
 Install the dependencies and build from source:
 
@@ -23,6 +26,38 @@ make build
 
 Optional: `make install` installs the `sidea` command into Go’s bin directory,
 which must be on your shell’s PATH.
+
+### Windows
+
+You need [Git](https://git-scm.com/download/win), Go, and librespot. In
+PowerShell, using [Scoop](https://scoop.sh) for Go and
+[Rust](https://rustup.rs) (Cargo) for librespot, which Scoop doesn't carry:
+
+```powershell
+scoop install go
+cargo install librespot
+
+git clone https://github.com/ericonyourphone/sidea.git
+cd sidea
+go install -tags demo -ldflags "-X main.version=v0.1.0-dev" .
+```
+
+This installs `sidea.exe` into `%USERPROFILE%\go\bin` and librespot into
+`%USERPROFILE%\.cargo\bin`. Make sure both folders are on your PATH (the Go
+and Rust installers normally add them), then open a new terminal and run:
+
+```powershell
+sidea demo   # offline demo, no Spotify needed
+sidea        # connect Spotify and start playing
+```
+
+`make` isn't required on Windows. To build a local `sidea.exe` in the repo
+instead of installing, run
+`go build -tags demo -ldflags "-X main.version=v0.1.0-dev" -o sidea.exe .`.
+Without `-tags demo`, `sidea demo` is unavailable.
+
+If Windows Application Control or antivirus blocks a freshly built binary,
+allow it or build from a different folder.
 
 The first launch guides you through connecting Spotify and setting up
 local playback. For a personal Spotify developer app, use `./sidea auth --own`.
